@@ -1,0 +1,110 @@
+import { Message, Conversation, OtherUser } from '../../types';
+
+export const addMessageToStore = (
+  state: Conversation[],
+  payload: { message: Message; sender: OtherUser | null }
+): Conversation[] => {
+  const { message, sender } = payload;
+  // if sender isn't null, that means the message needs to be put in a brand new convo
+  if (sender !== null) {
+    const newConvo = {
+      id: message.conversationId,
+      otherUser: sender,
+      messages: [message],
+      latestMessageText: message.text,
+    };
+    return [newConvo, ...state];
+  }
+
+  return state.map((convo) => {
+    if (convo.id === message.conversationId) {
+      const convoCopy = { ...convo };
+      convoCopy.messages = [...convoCopy.messages, message];
+      convoCopy.latestMessageText = message.text;
+      return convoCopy;
+    } else {
+      return convo;
+    }
+  });
+};
+
+export const addOnlineUserToStore = (
+  state: Conversation[],
+  id: number
+): Conversation[] => {
+  return state.map((convo) => {
+    if (convo.otherUser.id === id) {
+      const convoCopy = { ...convo };
+      const otherUserCopy = { ...convoCopy.otherUser };
+      otherUserCopy.online = true;
+      convoCopy.otherUser = otherUserCopy;
+      return convoCopy;
+    } else {
+      return convo;
+    }
+  });
+};
+
+export const removeOfflineUserFromStore = (
+  state: Conversation[],
+  id: number
+): Conversation[] => {
+  return state.map((convo) => {
+    if (convo.otherUser.id === id) {
+      const convoCopy = { ...convo };
+      const otherUserCopy = { ...convoCopy.otherUser };
+      otherUserCopy.online = false;
+      convoCopy.otherUser = otherUserCopy;
+      return convoCopy;
+    } else {
+      return convo;
+    }
+  });
+};
+
+export const addSearchedUsersToStore = (
+  state: Conversation[],
+  users: OtherUser[]
+) => {
+  const currentUsers: { [key: number]: boolean } = {};
+
+  // make table of current users so we can lookup faster
+  state.forEach((convo) => {
+    currentUsers[convo.otherUser.id] = true;
+  });
+
+  const newState = [...state];
+  users.forEach((user) => {
+    // only create a fake convo if we don't already have a convo with this user
+    if (!currentUsers[user.id]) {
+      const fakeConvo: Conversation = {
+        id: undefined,
+        otherUser: user,
+        messages: [],
+      };
+      newState.push(fakeConvo);
+    }
+  });
+
+  return newState;
+};
+
+export const addNewConvoToStore = (
+  state: Conversation[],
+  recipientId: number,
+  message: Message
+): Conversation[] => {
+  return state.map((convo) => {
+    if (convo.otherUser.id === recipientId) {
+      const convoCopy = { ...convo };
+      convoCopy.id = message.conversationId;
+      if (convoCopy.id) {
+        convoCopy.messages = [...convoCopy.messages, message]
+        convoCopy.latestMessageText = message.text;
+      }
+      return convoCopy;
+    } else {
+      return convo;
+    }
+  });
+};
